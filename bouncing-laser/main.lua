@@ -43,26 +43,53 @@ function love.update(dt)
   gunDir = (mousePos - playerPos):normalized()
   gunPos = playerPos + gunDir*19
 
-  local hitIdx, hitPoint, hitNormal = laser.raycast(world, playerPos, playerVel)
-  if hitPoint and playerPos:dist(hitPoint) <= 20 then
-    playerVel = laser.reflect(playerPos, hitPoint, hitNormal)
-    playerAcc = vector(0, 0)
+  local last_point = nil
+  for i, point in ipairs(world) do
+    -- collisions with points
+    local normalToPlayer = (playerPos - point):normalized()
+    if normalToPlayer * playerVel < 0 and playerPos:dist(point) <= 20 then
+      playerPos = playerPos - playerVel
+      playerVel = laser.reflect(playerPos, playerPos + playerVel, normalToPlayer) * playerVel:len() / 1.1
+      playerAcc = vector(0, 0)
+      break
+    end
+
+    -- collisions with walls
+    if last_point then
+      local wallNormal = laser.normalOfLine(point, last_point)
+      local dirToPlayer = playerPos - point
+      if wallNormal * dirToPlayer < 0 then
+        wallNormal = -wallNormal
+      end
+      if wallNormal * playerVel < 0 then
+        local hitIdx, hitPoint, hitNormal = laser.raycast({ last_point, point }, playerPos, -wallNormal)
+        if hitPoint and playerPos:dist(hitPoint) <= 20 then
+          playerPos = playerPos - playerVel
+          playerVel = laser.reflect(playerPos, playerPos + playerVel, hitNormal) * playerVel:len() / 1.5
+          playerAcc = vector(0, 0)
+          break
+        end
+      end
+    end
+    last_point = point
   end
 
   laserSegments = {}
   if firingLaser then
-    local laserStart = gunPos + gunDir*6
+    table.insert(laserSegments, gunPos + gunDir*6)
+
+    local laserStart = playerPos + gunDir
     local laserDir = gunDir
 
     while #laserSegments < 100 do
-      table.insert(laserSegments, laserStart)
-
       local hitIdx, hitPoint, hitNormal = laser.raycast(world, laserStart, laserDir)
 
       if not hitPoint then break end
 
       laserDir = laser.reflect(laserStart, hitPoint, hitNormal)
       laserStart = hitPoint
+
+      table.insert(laserSegments, laserStart)
     end
 
     table.insert(laserSegments, laserStart + laserDir*love.graphics.getWidth()*3)

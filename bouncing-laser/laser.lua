@@ -29,6 +29,12 @@ local function isPointOnRay(p, origin, dir)
   return (p - origin) * dir > 0
 end
 
+local function normalOfLine(point1, point2)
+  local vec = point1 - point2
+  local vec_rotated = vector(vec.y, -vec.x)
+  return vec_rotated:normalized()
+end
+
 local function raycast(world, origin, dir)
   local closest_hit = nil
   local closest_hit_dist2 = nil
@@ -54,12 +60,10 @@ local function raycast(world, origin, dir)
 
   local hit_normal = nil
   if closest_hit then
-    local wall_vec = world[closest_hit_idx] - world[closest_hit_idx - 1]
-    local wall_vec_rot90 = vector(wall_vec.y, -wall_vec.x)
-    if wall_vec_rot90 * dir > 0 then
-      wall_vec_rot90 = -wall_vec_rot90
+    hit_normal = normalOfLine(world[closest_hit_idx], world[closest_hit_idx - 1])
+    if hit_normal * dir > 0 then
+      hit_normal = -hit_normal
     end
-    hit_normal = wall_vec_rot90:normalized()
   end
 
   return closest_hit_idx, closest_hit, hit_normal
@@ -73,5 +77,6 @@ end
 
 return {
   raycast = raycast,
-  reflect = reflect
+  reflect = reflect,
+  normalOfLine = normalOfLine
 }
