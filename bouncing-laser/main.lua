@@ -10,11 +10,16 @@ function love.load()
   isPressingDown = false
   isPressingRight = false
 
+  aimWithMouse = false
   mousePos = vector(0, 0)
 
   playerPos = vector(love.graphics.getWidth()/2, love.graphics.getHeight()/2)
   playerVel = vector(0, 0)
   playerAcc = vector(0, 0)
+
+  gunAngle = 0
+  gunVel = 0
+  gunAcc = 0
 
   firingLaser = false
 
@@ -34,13 +39,30 @@ function love.update(dt)
   else playerAcc.x = 0
   end
 
+  if isPressingAimLeft then gunAcc = 0.001
+  elseif isPressingAimRight then gunAcc = -0.001
+  else gunAcc = 0
+  end
+
   playerVel = playerVel + playerAcc
   playerPos = playerPos + playerVel
 
   playerAcc = playerAcc / 1.1
   playerVel = playerVel / 1.01
 
-  gunDir = (mousePos - playerPos):normalized()
+  gunVel = gunVel + gunAcc
+  gunAngle = gunAngle + gunVel
+
+  gunAcc = gunAcc / 1.1
+  gunVel = gunVel / 1.01
+
+  if aimWithMouse then
+    gunDir = (mousePos - playerPos):normalized()
+    gunAngle = math.atan2(gunDir.y, gunDir.x)
+  else
+    gunDir = vector(math.cos(gunAngle), math.sin(gunAngle))
+  end
+
   gunPos = playerPos + gunDir*19
 
   local last_point = nil
@@ -147,6 +169,12 @@ function love.mousepressed(x, y, button)
   table.insert(world, vector(x, y))
 end
 
+function love.mousemoved()
+  aimWithMouse = true
+  gunAcc = 0
+  gunVel = 0
+end
+
 function love.keypressed(key, scancode)
   if key == "escape" or key == "q" then
     love.event.quit()
@@ -158,6 +186,12 @@ function love.keypressed(key, scancode)
     isPressingDown = true
   elseif key == "d" then
     isPressingRight = true
+  elseif key == "left" then
+    isPressingAimLeft = true
+    aimWithMouse = false
+  elseif key == "right" then
+    isPressingAimRight = true
+    aimWithMouse = false
   elseif key == "space" then
     firingLaser = true
   elseif key == "r" then
@@ -176,6 +210,10 @@ function love.keyreleased(key, scancode)
     isPressingDown = false
   elseif key == "d" then
     isPressingRight = false
+  elseif key == "left" then
+    isPressingAimLeft = false
+  elseif key == "right" then
+    isPressingAimRight = false
   elseif key == "space" then
     firingLaser = false
   end
